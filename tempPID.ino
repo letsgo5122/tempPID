@@ -5,8 +5,10 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 #define seconds(x) (x * 1000) //x seconds
 #define RELAY 13
 #define BUTTON A1
-#define ECROTA 2
-#define ECROTB 3
+//#define ECROTA 2
+//#define ECROTB 3
+#define ecClk 2
+#define ecData 3
 
 //Temperature sensor
 #define Hotend(x) uint8_t(x)  //x = Anolog 0 ~ 5
@@ -19,7 +21,9 @@ float c1 = 1.009249522e-03, c2 = 2.378405444e-04, c3 = 2.019202697e-07;
 double lcdDisplayCounter = 0;// ms
 bool RefreshLCD = 0;
 int m_w;
-
+int ecState;
+int ecLastState;
+int ecCounter;
 
 //PID
 double Setpoint, Output ,currentTemp;
@@ -39,10 +43,12 @@ void setup() {
   pinMode(Hotend(0), INPUT);
   pinMode(RELAY, OUTPUT);
   pinMode(BUTTON, INPUT_PULLUP);
-  pinMode(ECROTA, INPUT_PULLUP);
-  pinMode(ECROTB, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(ECROTA), rotA, FALLING);
-  attachInterrupt(digitalPinToInterrupt(ECROTB), rotB, FALLING);
+ // pinMode(ECROTA, INPUT_PULLUP);
+ // pinMode(ECROTB, INPUT_PULLUP);
+  pinMode(ecClk, INPUT_PULLUP);
+  pinMode(ecData, INPUT_PULLUP);
+  //attachInterrupt(digitalPinToInterrupt(ECROTA), rotA, FALLING);
+  //attachInterrupt(digitalPinToInterrupt(ECROTB), rotB, FALLING);
   //setPid(20,0.05,5);//45
   setPid(50,1.125,160);//45
   Setpoint = 25;
@@ -50,6 +56,7 @@ void setup() {
   }
 
 void loop(){
+  encoderState();
   isBtPush();//Reset some values
   double Input = getTemp(Hotend(0));//A0
   currentTemp = Input;
@@ -63,7 +70,18 @@ void loop(){
   lcdDisplay();
   
   }
-
+  
+void encoderState(){
+  ecState = digitalRead(ecClk);
+  if(ecState != ecLastState){
+    if(digitalRead(ecData)!= ecState){
+      ecCounter ++;
+    }
+    else ecCounter --;
+  }
+  ecVal = ecCounter/2;
+  ecLastState = ecState;
+  }
 float nextTemperature(float currentTemp){
   if ( currentTemp + 10 >= Setpoint ){
    WindowSize=2000; sampleTime=1000, tempStep=1;
@@ -172,38 +190,38 @@ void lcdDisplay(){
     }
   }
 
-void rotA(){
-  uint8_t interval = 50;
-  bool t1=0, t2=0, t3=0, t4=0;
-  while (interval > 0) {
-    if (!digitalRead(ECROTA) && digitalRead(ECROTB)) t1 = 1;
-    delay(1);
-    if (!digitalRead(ECROTA) && !digitalRead(ECROTB)) t2 = 1;
-    delay(1);
-    if (digitalRead(ECROTA) && !digitalRead(ECROTB)) t3 = 1;
-    delay(1);
-    if (digitalRead(ECROTA) && digitalRead(ECROTB)) t4 = 1;
-    delay(1);
-    if (t1 && t2 && t3 && t4){ecVal ++; break;}
-    interval--;
-    RefreshLCD=1;
-  }
-}
+//void rotA(){
+//  uint8_t interval = 50;
+//  bool t1=0, t2=0, t3=0, t4=0;
+//  while (interval > 0) {
+//    if (!digitalRead(ECROTA) && digitalRead(ECROTB)) t1 = 1;
+//    delay(1);
+//    if (!digitalRead(ECROTA) && !digitalRead(ECROTB)) t2 = 1;
+//    delay(1);
+//    if (digitalRead(ECROTA) && !digitalRead(ECROTB)) t3 = 1;
+//    delay(1);
+//    if (digitalRead(ECROTA) && digitalRead(ECROTB)) t4 = 1;
+//    delay(1);
+//    if (t1 && t2 && t3 && t4){ecVal ++; break;}
+//    interval--;
+//    RefreshLCD=1;
+//  }
+//}
 
-void rotB(){
-  uint8_t interval = 50;
-  bool t1=0, t2=0, t3=0, t4=0;
-  while (interval > 0) {
-    if (digitalRead(ECROTA) && !digitalRead(ECROTB)) t1 = 1;
-    delay(5);
-    if (!digitalRead(ECROTA) && !digitalRead(ECROTB)) t2 = 1;
-    delay(5);
-    if (!digitalRead(ECROTA) && digitalRead(ECROTB)) t3 = 1;
-    delay(5);
-    if (digitalRead(ECROTA) && digitalRead(ECROTB)) t4 = 1;
-    delay(5);
-    if (t1 && t2 && t3 && t4){ecVal --; break;}
-    interval--;
-    RefreshLCD=1;
-  }
-}
+//void rotB(){
+//  uint8_t interval = 50;
+//  bool t1=0, t2=0, t3=0, t4=0;
+//  while (interval > 0) {
+//    if (digitalRead(ECROTA) && !digitalRead(ECROTB)) t1 = 1;
+//    delay(5);
+//    if (!digitalRead(ECROTA) && !digitalRead(ECROTB)) t2 = 1;
+//    delay(5);
+//    if (!digitalRead(ECROTA) && digitalRead(ECROTB)) t3 = 1;
+//    delay(5);
+//    if (digitalRead(ECROTA) && digitalRead(ECROTB)) t4 = 1;
+//    delay(5);
+//    if (t1 && t2 && t3 && t4){ecVal --; break;}
+//    interval--;
+//    RefreshLCD=1;
+//  }
+//}

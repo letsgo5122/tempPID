@@ -26,12 +26,6 @@ float ecCounter;
 bool ecBtPushed = 0;
 String menu="main";
 
-
-//menu 
-String page0[]= { "item0", "item1item1", "item2","item3"};
-float itemIndex;
-String raw[4];
-
 //PID
 double Setpoint, Output ,currentTemp;
 double Kp=0, Ki=0, Kd=0;
@@ -58,8 +52,7 @@ void setup() {
   setPid(50,1.125,160);//45
   Setpoint = 25;
   ecVal = 45;
-  menu = "page0";
-
+  
   }
 
 void loop(){
@@ -88,17 +81,8 @@ void menuSelect(String m){
     else { 
       ecCounter = -0.5;
     }
-
-    if ( m == "page0" ){
-      itemIndex += ecCounter;
-      uint8_t elements = sizeof(page0)/sizeof(page0[0]);
-      itemIndex =  itemIndex > elements? 0:abs(itemIndex);
-      for (int i= 0;i<elements;i++){
-        if ((int)itemIndex==i){raw[i] = "->"+page0[i];}
-        else {raw[i] = page0[i];}
-        }
-      }
-    else if ( m == "main"){ecVal += ecCounter;}
+  
+    if ( m == "main"){ecVal += ecCounter;}
     else if ( m == "Kp" ){Kp += ecCounter;}
     else if ( m == "Ki" ){Ki += ecCounter * 0.01;}
     else if( m == "Kd" ){Kd += ecCounter;}
@@ -109,51 +93,43 @@ void menuSelect(String m){
     //ecVal += ecCounter;
     if (ecCounter ==1 || ecCounter ==-1 ){ecCounter=0;}
   }
-
-
-  if (digitalRead(ecBT)==0 && m=="page0"){
-      menu = "main"; 
-      delay(500);//ecBT debounce
-      return;
-   }
-  
-   if (digitalRead(ecBT)==0 && m=="main"){
-      menu = "pid";
-      delay(500);//ecBT debounce
-      return;
-   }
-   if (digitalRead(ecBT)==0 && m=="pid"){
-      menu = "Kp";
-      delay(500);//ecBT debounce
-      return;
-   }
-    if (digitalRead(ecBT)==0 && m=="Kp"){
-      menu = "Ki";
-      delay(500);//ecBT debounce
-      return;
-   }
-     if (digitalRead(ecBT)==0 && m=="Ki"){
-      menu = "Kd";
-      delay(500);//ecBT debounce
-      return;
-   }
-   
-   if (digitalRead(ecBT)==0 && m=="Kd"){//ecBT pushed
-      menu = "start";
-      delay(500);//ecBT debounce
-      return;
-   }
-   if (digitalRead(ecBT)==0 && m=="start"){
-      menu = "main";
-      delay(500);//ecBT debounce    elapse = 0;
-      WindowSize = 1000; sampleTime = 100;
-      tempStep = 3;
-      pErr=0; iErr=0; dErr=0;
-      //getTemp(Hotend(A0))
-      targetPoint = getTemp(Hotend(0)) + tempStep;// + 1 nextTemperature 
-      Setpoint = ecVal;
-      return;
-   }
+if (digitalRead(ecBT)==0 && m=="main"){
+    menu = "pid";
+    delay(500);//ecBT debounce
+    return;
+ }
+ if (digitalRead(ecBT)==0 && m=="pid"){
+    menu = "Kp";
+    delay(500);//ecBT debounce
+    return;
+ }
+  if (digitalRead(ecBT)==0 && m=="Kp"){
+    menu = "Ki";
+    delay(500);//ecBT debounce
+    return;
+ }
+   if (digitalRead(ecBT)==0 && m=="Ki"){
+    menu = "Kd";
+    delay(500);//ecBT debounce
+    return;
+ }
+ 
+ if (digitalRead(ecBT)==0 && m=="Kd"){//ecBT pushed
+    menu = "start";
+    delay(500);//ecBT debounce
+    return;
+ }
+ if (digitalRead(ecBT)==0 && m=="start"){
+    menu = "main";
+    delay(500);//ecBT debounce    elapse = 0;
+    WindowSize = 1000; sampleTime = 100;
+    tempStep = 3;
+    pErr=0; iErr=0; dErr=0;
+    //getTemp(Hotend(A0))
+    targetPoint = getTemp(Hotend(0)) + tempStep;// + 1 nextTemperature 
+    Setpoint = ecVal;
+    return;
+ }
  
 }
 
@@ -220,22 +196,7 @@ double getTemp(uint8_t pin){
 void lcdDisplay(){
   double now = millis();
     if (now-lcdDisplayCounter >= seconds(1) || RefreshLCD){
-      if(menu == "page0"){
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("0:");
-        lcd.print(raw[0]);
-        lcd.setCursor(0, 1);
-        lcd.print("1:");
-        lcd.print(raw[1]);
-        lcd.setCursor(0, 2);
-        lcd.print("2:");
-        lcd.print(raw[2]);  
-        lcd.setCursor(0, 3); 
-        lcd.print("3:");
-        lcd.print(raw[3]); 
-          
-      }
+      //lcd.begin(20, 4);
       if(menu=="main"){
         lcd.clear();
         lcd.setCursor(0, 0);

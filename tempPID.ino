@@ -24,11 +24,11 @@ int ecRotState;
 int ecRotLastState;
 float ecCounter;
 bool ecBtPushed = 0;
-String menu="main";
+String menu="Main";
 
 
 //menu 
-String page0[]= { "item0", "item1item1", "item2","item3"};
+String menuPID[]= { "Start", "Kp","Ki", "Kd" };
 float itemIndex;
 String raw[4];
 
@@ -58,7 +58,7 @@ void setup() {
   setPid(50,1.125,160);//45
   Setpoint = 25;
   ecVal = 45;
-  menu = "page0";
+  menu = "Main";
 
   }
 
@@ -89,62 +89,58 @@ void menuSelect(String m){
       ecCounter = -0.5;
     }
 
-    if ( m == "page0" ){
-      itemIndex += ecCounter;
-      uint8_t elements = sizeof(page0)/sizeof(page0[0]);
-      itemIndex =  itemIndex > elements? 0:abs(itemIndex);
-      for (int i= 0;i<elements;i++){
-        if ((int)itemIndex==i){raw[i] = "->"+page0[i];}
-        else {raw[i] = page0[i];}
-        }
-      }
-    else if ( m == "main"){ecVal += ecCounter;}
+    if ( m == "Main"){ecVal += ecCounter;}
+    else if ( m == "menuPID"){itemIndex += ecCounter;}
+    else if( m == "Start" ){ecVal += ecCounter;}
     else if ( m == "Kp" ){Kp += ecCounter;}
     else if ( m == "Ki" ){Ki += ecCounter * 0.01;}
     else if( m == "Kd" ){Kd += ecCounter;}
-    else if( m == "start" ){ecVal += ecCounter;}
-    else ;
-    
+ 
     ecRotLastState = ecRotState;
-    //ecVal += ecCounter;
     if (ecCounter ==1 || ecCounter ==-1 ){ecCounter=0;}
+    }
+    
+ 
+
+   if (digitalRead(ecBT)==0 && m=="Main"){
+      menu = "menuPID";
+      delay(500);//ecBT debounce
+
+   }
+  if ( m == "menuPID" ){
+    uint8_t elements = sizeof(menuPID)/sizeof(menuPID[0]);
+    itemIndex =  itemIndex > elements? 0:abs(itemIndex);
+    for (int i= 0;i<elements;i++){
+      if ((int)itemIndex==i){
+        raw[i] = ">" + menuPID[i];       
+      }
+      else { raw[i] = " " + menuPID[i]; }
+      }
   }
-
-
-  if (digitalRead(ecBT)==0 && m=="page0"){
-      menu = "main"; 
-      delay(500);//ecBT debounce
-      return;
-   }
-  
-   if (digitalRead(ecBT)==0 && m=="main"){
-      menu = "pid";
-      delay(500);//ecBT debounce
-      return;
-   }
-   if (digitalRead(ecBT)==0 && m=="pid"){
-      menu = "Kp";
-      delay(500);//ecBT debounce
-      return;
-   }
-    if (digitalRead(ecBT)==0 && m=="Kp"){
-      menu = "Ki";
-      delay(500);//ecBT debounce
-      return;
-   }
-     if (digitalRead(ecBT)==0 && m=="Ki"){
-      menu = "Kd";
-      delay(500);//ecBT debounce
-      return;
-   }
    
-   if (digitalRead(ecBT)==0 && m=="Kd"){//ecBT pushed
-      menu = "start";
-      delay(500);//ecBT debounce
-      return;
+   if (digitalRead(ecBT)==0 && m=="menuPID"){
+    uint8_t elements = sizeof(menuPID)/sizeof(menuPID[0]);
+    for (int i= 0;i<elements;i++){
+        if ( raw[i] == ">" + menuPID[i] ){ menu = menuPID[i]; }   
+    }
+    delay(500);//ecBT debounce
    }
-   if (digitalRead(ecBT)==0 && m=="start"){
-      menu = "main";
+   if (digitalRead(ecBT)==0 && m=="Kp"){
+      menu = "menuPID";  
+      delay(500);//ecBT debounce
+   }
+
+   if (digitalRead(ecBT)==0 && m=="Ki"){
+      menu = "menuPID";
+      delay(500);//ecBT debounce
+   }
+   if (digitalRead(ecBT)==0 && m=="Kd"){
+      menu = "menuPID";
+      delay(500);//ecBT debounce
+   }
+
+   if (digitalRead(ecBT)==0 && m=="Start"){
+      menu = "Main";
       delay(500);//ecBT debounce    elapse = 0;
       WindowSize = 1000; sampleTime = 100;
       tempStep = 3;
@@ -152,9 +148,8 @@ void menuSelect(String m){
       //getTemp(Hotend(A0))
       targetPoint = getTemp(Hotend(0)) + tempStep;// + 1 nextTemperature 
       Setpoint = ecVal;
-      return;
-   }
  
+   }
 }
 
 
@@ -220,23 +215,7 @@ double getTemp(uint8_t pin){
 void lcdDisplay(){
   double now = millis();
     if (now-lcdDisplayCounter >= seconds(1) || RefreshLCD){
-      if(menu == "page0"){
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("0:");
-        lcd.print(raw[0]);
-        lcd.setCursor(0, 1);
-        lcd.print("1:");
-        lcd.print(raw[1]);
-        lcd.setCursor(0, 2);
-        lcd.print("2:");
-        lcd.print(raw[2]);  
-        lcd.setCursor(0, 3); 
-        lcd.print("3:");
-        lcd.print(raw[3]); 
-          
-      }
-      if(menu=="main"){
+      if(menu=="Main"){
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print(currentTemp);
@@ -255,7 +234,7 @@ void lcdDisplay(){
         lcd.print(iErr);
         lcd.setCursor(0, 3);
         lcd.print("Tg:");
-        lcd.print(targetPoint,0);
+        lcd.print((int)targetPoint);
         lcd.print(" elapse:");
         lcd.print(elapse,0);
       
@@ -263,19 +242,22 @@ void lcdDisplay(){
         //Serial.print(" Output: ");
         //Serial.println(Output);  
       }
-      if(menu== "pid"){
+      if(menu== "menuPID"){
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print(" Kp:");
-        lcd.print(Kp);
+        lcd.print(raw[0]);
         lcd.setCursor(0, 1);
-        lcd.print(" Ki:");
+        lcd.print(raw[1]);
+        lcd.print(":");
+        lcd.print(Kp);
+        lcd.setCursor(0,2);
+        lcd.print(raw[2]);
+        lcd.print(":");
         lcd.print(Ki);
-        lcd.setCursor(0, 2);
-        lcd.print(" Kd:");
-        lcd.print(Kd); 
-        lcd.setCursor(0, 3);
-        lcd.print("        Back");                          
+        lcd.setCursor(0,3);
+        lcd.print(raw[3]);
+        lcd.print(":");
+        lcd.print(Kd);
       }
       if(menu== "Kp"){
         lcd.clear();
@@ -301,7 +283,7 @@ void lcdDisplay(){
         lcd.setCursor(0, 3);
         lcd.print("        Back");  
       }
-      if(menu== "start"){
+      if(menu== "Start"){
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print(currentTemp);
@@ -310,12 +292,14 @@ void lcdDisplay(){
         lcd.print(int(Setpoint));
         lcd.print(" *:");
         lcd.print(int(ecVal));
-        lcd.setCursor(0, 1);     
-        lcd.print("Output");
-        lcd.print(Output,0);
-        lcd.print(" MI:");
-        lcd.print(menu);
-        lcd.print("        Back");                          
+        lcd.setCursor(0, 1);
+        lcd.print("Kp:");
+        lcd.print(Kp,0); 
+        lcd.print(" Kd:");
+        lcd.print(Kd,0);   
+        lcd.setCursor(0, 2);     
+        lcd.print("Ki:");
+        lcd.print(Ki,3);                   
       }
 
       Serial.print("Tc: ");

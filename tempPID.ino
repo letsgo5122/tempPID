@@ -28,7 +28,7 @@ bool ecBtPushed = 0;
 
 //menu
 String menu="Main";
-String menuPID[]= { "Start", "Kp","Ki", "Kd" ,"WindowSize","SampleTime","Back","Back"};
+String menuPID[]= { "Start", "Kp","Ki", "Kd" ,"WindowSize","SampleTime","BackMain","Back"};
 float itemIndex;
 String raw[4];
 
@@ -42,7 +42,7 @@ unsigned long lastTime;
 double pErr, iErr, dErr, lastErr;
 float ecVal;
 //float sec = 1000;
-float targetPoint, nextTargetTime, tempStep=0 ,elapse=0.0;
+float targetPoint, nextTargetTime, period, tempStep=0 ,elapse=0.0;
 bool pidRun=0;
 
 void setup() {
@@ -54,8 +54,8 @@ void setup() {
   pinMode(ecClk, INPUT_PULLUP);
   pinMode(ecData, INPUT_PULLUP);
 
-  //setPid(20,0.05,5);//45
-  setPid(50,1.125,160);//45
+  //setPid(50,1.125,160);//45
+  setPid(20,1.06,50);//45
   Setpoint = 25;
   ecVal = 50;
   menu = "Main";
@@ -101,7 +101,7 @@ void menuSelect(String m){
     else if ( m == "SampleTime" ){SampleTime += ecCounter * 10;}
     ecRotLastState = ecRotState;
     if (ecCounter ==1 || ecCounter ==-1 ){ecCounter=0;}
-    }
+  }
     
  
 
@@ -148,6 +148,10 @@ void menuSelect(String m){
     }
     delay(500);//ecBT debounce
    }
+   if (digitalRead(ecBT)==0 && m=="BackMain"){
+      menu = "Main";  
+      delay(500);//ecBT debounce
+   }
    if (digitalRead(ecBT)==0 && m=="Back"){
       menu = "menuPID";  
       delay(500);//ecBT debounce
@@ -178,41 +182,43 @@ void menuSelect(String m){
       menu = "Main";
       delay(500);//ecBT debounce    elapse = 0;
       WindowSize = 1000; SampleTime = 100;
-      tempStep = 3;
+      tempStep = 5;//3
       pErr=0; iErr=0; dErr=0;
       //getTemp(Hotend(A0))
       targetPoint = getTemp(Hotend(0)) + tempStep;// nextTemperature 
       Setpoint = ecVal;
       pidRun = 1;
- 
    }
+ 
 }
 
 
-float nextTemperature(float currentTemp){
-  if ( currentTemp + 10 >= Setpoint ){
-   WindowSize=2000; SampleTime=1000, tempStep=1;
-  }
-  else {WindowSize = 1000; SampleTime = 100;}
-  
-  if (currentTemp >= targetPoint){
-  //if (millis()-nextTargetTime >= seconds(1) && currentTemp >= targetPoint){
-    targetPoint += tempStep;
-    if (targetPoint > Setpoint) targetPoint = Setpoint;
-    nextTargetTime = millis();
-  }
+float nextTemperature(float currentTemp){ 
+  if (currentTemp >= targetPoint && currentTemp < Setpoint ){
+      
+      targetPoint += tempStep;
+    
+      if ( currentTemp + 10 >= Setpoint && WindowSize <1500){
+        int windsize = abs((Setpoint-currentTemp)*100);
+        WindowSize+=windsize; SampleTime+=windsize; tempStep=1;
+        if (WindowSize>1500)WindowSize = 1500;
+        if (SampleTime>500)SampleTime= 500;
+      }
+    }
+  if (targetPoint > Setpoint) targetPoint = Setpoint;
   return targetPoint;
 }
 
 
 void Compute(float targetPoint,float Input){
   unsigned long now = millis();
-  double timeChange = now - lastTime;
-  if ( timeChange >= SampleTime){
+  double timeChange = now - lastTime;  
+  if ( timeChange >= SampleTime ){ 
     pErr = (targetPoint - Input);
     iErr += pErr * timeChange/1000;//sec
     dErr =  (pErr - lastErr)/timeChange/1000;
     Output = Kp * pErr + Ki * iErr + Kd * dErr;
+    if (Output>WindowSize)Output = WindowSize;
     lastErr = pErr;
     lastTime = now;
   }  
@@ -251,7 +257,7 @@ double getTemp(uint8_t pin){
 void lcdDisplay(){
   double now = millis();
     if (now-lcdDisplayCounter >= seconds(1) || RefreshLCD){
-      if(menu=="Main"){
+      if(menu=="Main" || menu=="BackMain"){
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print(currentTemp);
@@ -266,8 +272,8 @@ void lcdDisplay(){
         lcd.print(" Menu:");
         lcd.print(menu);
         lcd.setCursor(0, 2);
-        lcd.print("iEr:");
-        lcd.print(iErr);
+        lcd.print("WT:");
+        lcd.print(WindowSize);
         lcd.setCursor(0, 3);
         lcd.print("Tg:");
         lcd.print((int)targetPoint);

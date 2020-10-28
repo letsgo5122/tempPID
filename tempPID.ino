@@ -39,7 +39,7 @@ int WindowSize = 1000;
 unsigned long windowStartTime;
 int SampleTime = 100;
 unsigned long lastTime;
-double pErr, iErr, dErr, lastErr;
+double pErr, iErr, dErr, lastErr, temp_dState;
 float ecVal;
 //float sec = 1000;
 float targetPoint, nextTargetTime, period, tempStep=0 ,elapse=0.0;
@@ -181,8 +181,8 @@ void menuSelect(String m){
    if (digitalRead(ecBT)==0 && m=="Start"){
       menu = "Main";
       delay(500);//ecBT debounce    elapse = 0;
-      WindowSize = 1000; SampleTime = 100;
-      tempStep = 5;//3
+      WindowSize = 500; SampleTime = 50;
+      tempStep = 3;//3
       pErr=0; iErr=0; dErr=0;
       //getTemp(Hotend(A0))
       targetPoint = getTemp(Hotend(0)) + tempStep;// nextTemperature 
@@ -197,12 +197,14 @@ float nextTemperature(float currentTemp){
   if (currentTemp >= targetPoint && currentTemp < Setpoint ){
       
       targetPoint += tempStep;
-    
-      if ( currentTemp + 10 >= Setpoint && WindowSize <1500){
-        int windsize = abs((Setpoint-currentTemp)*100);
-        WindowSize+=windsize; SampleTime+=windsize; tempStep=1;
-        if (WindowSize>1500)WindowSize = 1500;
-        if (SampleTime>500)SampleTime= 500;
+
+      if ( currentTemp + 10 >= Setpoint && WindowSize <1600){
+       int w_size =abs(Setpoint-currentTemp)*50;
+        WindowSize+=w_size; 
+        SampleTime+=w_size; 
+        tempStep=1;
+        if (WindowSize>1600)WindowSize = 1600;
+        if (SampleTime>1000)SampleTime = 1000;
       }
     }
   if (targetPoint > Setpoint) targetPoint = Setpoint;
@@ -214,13 +216,16 @@ void Compute(float targetPoint,float Input){
   unsigned long now = millis();
   double timeChange = now - lastTime;  
   if ( timeChange >= SampleTime ){ 
-    pErr = (targetPoint - Input);
+    pErr = (targetPoint - Input); 
+    //iErr = constrain(iErr + pErr, -250, 250);
     iErr += pErr * timeChange/1000;//sec
     dErr =  (pErr - lastErr)/timeChange/1000;
+    //dErr = Kd + (Kd*(temp_dState -Input)-Kd);
     Output = Kp * pErr + Ki * iErr + Kd * dErr;
     if (Output>WindowSize)Output = WindowSize;
     lastErr = pErr;
     lastTime = now;
+    temp_dState = Input;
   }  
 }
 
@@ -272,7 +277,7 @@ void lcdDisplay(){
         lcd.print(" Menu:");
         lcd.print(menu);
         lcd.setCursor(0, 2);
-        lcd.print("WT:");
+        lcd.print("WSize:");
         lcd.print(WindowSize);
         lcd.setCursor(0, 3);
         lcd.print("Tg:");
